@@ -143,21 +143,7 @@ class Retry extends AbstractHelper
      */
     public function processResponseStatus($case, $order)
     {
-        $negativeAction = $case->getNegativeAction();
-        $positiveAction = $case->getPositiveAction();
-
-        switch ($case->getGuarantee()) {
-            case 'DECLINED':
-                $orderAction = ["action" => $negativeAction, "reason" => "guarantee declined"];
-                break;
-
-            case 'APPROVED':
-                $orderAction = ["action" => $positiveAction, "reason" => "guarantee approved"];
-                break;
-
-            default:
-                $orderAction = ['action' => null, 'reason' => null];
-        }
+        $orderAction = $case->handleGuaranteeChange();
 
         $caseData = ['order' => $order];
         /** @var \Signifyd\Connect\Model\Casedata $caseObj */

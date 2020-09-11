@@ -151,7 +151,6 @@ class Casedata extends AbstractModel
             $case = $caseData['case'];
             $response = $caseData['response'];
             $order = $caseData['order'];
-            $orderAction = ["action" => null, "reason" => ''];
 
             if (isset($response->score) && $case->getScore() != $response->score) {
                 $case->setScore($response->score);
@@ -165,7 +164,6 @@ class Casedata extends AbstractModel
             if (isset($response->guaranteeDisposition) && $case->getGuarantee() != $response->guaranteeDisposition) {
                 $case->setGuarantee($response->guaranteeDisposition);
                 $order->setSignifydGuarantee($response->guaranteeDisposition);
-                $orderAction = $this->handleGuaranteeChange($caseData) ?: $orderAction;
             }
 
             if (isset($response->caseId) && empty($response->caseId) == false) {
@@ -173,6 +171,7 @@ class Casedata extends AbstractModel
                 $order->setSignifydCode($response->caseId);
             }
 
+            $orderAction = $case->handleGuaranteeChange();
             $guarantee = $case->getGuarantee();
             $score = $case->getScore();
 
@@ -223,9 +222,11 @@ class Casedata extends AbstractModel
 
         switch ($orderAction["action"]) {
             case "hold":
-                if ($order->canHold()) {
+                if ($order->canHold() || $order->getState() == Order::STATE_HOLDED) {
                     try {
-                        $order->hold();
+                        if ($order->getState() != Order::STATE_HOLDED) {
+                            $order->hold();
+                        }
 
                         $completeCase = true;
 
@@ -240,7 +241,8 @@ class Casedata extends AbstractModel
                     }
                 } else {
                     $reason = $this->orderHelper->getCannotHoldReason($order);
-                    $message = "Order {$order->getIncrementId()} can not be held because {$reason}";
+                    $message = "Order {$order->getIncrementId()} can not be held because {$reason}. " .
+                        "Tried to hold because {$orderAction["reason"]}";
                     $this->logger->debug($message, ['entity' => $case]);
                     $orderAction['action'] = false;
                     $order->addStatusHistoryComment("Signifyd: order cannot be updated to on hold, {$reason}");
@@ -413,19 +415,24 @@ class Casedata extends AbstractModel
      * @throws \Magento\Framework\Exception\LocalizedException
      * @return array
      */
-    protected function handleGuaranteeChange($caseData)
+    public function handleGuaranteeChange()
     {
-        if (!isset($caseData['case']) || !$caseData['case'] instanceof \Signifyd\Connect\Model\Casedata) {
-            return null;
+        $negativeAction = $this->getNegativeAction();
+        $positiveAction = $this->getPositiveAction();
+
+        $message = "Signifyd: Positive action for {$this->getOrderIncrement()}: " . $positiveAction;
+        $this->logger->debug($message, ['entity' => $this]);
+
+        $message = "Signifyd: Negative action for {$this->getOrderIncrement()}: " . $negativeAction;
+        $this->logger->debug($message, ['entity' => $this]);
+
+        $thresholdScore = intval($this->configHelper->getConfigData('signifyd/advanced/threshold_score'));
+
+        if ($this->getScore() <= $thresholdScore) {
+            return ["action" => "hold", "reason" => "score under {$thresholdScore}"];
         }
 
-        $negativeAction = $caseData['case']->getNegativeAction();
-        $positiveAction = $caseData['case']->getPositiveAction();
-
-        $message = "Signifyd: Positive action for {$caseData['case']->getOrderIncrement()}: " . $positiveAction;
-        $this->logger->debug($message, ['entity' => $caseData['case']]);
-        $response = $caseData['response'];
-        switch ($response->guaranteeDisposition) {
+        switch ($this->getGuarantee()) {
             case "DECLINED":
                 return ["action" => $negativeAction, "reason" => "guarantee declined"];
 
@@ -436,12 +443,10 @@ class Casedata extends AbstractModel
                 return ["action" => 'wait', "reason" => 'case in manual review'];
 
             default:
-                $message = "Signifyd: Unknown guaranty: " . $response->guaranteeDisposition;
-                $this->logger->debug($message, ['entity' => $caseData['case']]);
-                break;
+                $message = "Signifyd: Unknown guaranty: " . $this->getGuarantee();
+                $this->logger->debug($message, ['entity' => $this]);
+                return ["action" => null, "reason" => ''];
         }
-
-        return null;
     }
 
     /**
