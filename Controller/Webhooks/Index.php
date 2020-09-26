@@ -143,12 +143,6 @@ class Index extends Action
             /** @var $case \Signifyd\Connect\Model\Casedata */
             $case = $this->objectManager->create(\Signifyd\Connect\Model\Casedata::class)->load($requestJson->orderId);
 
-            $caseData = [
-                "case" => $case,
-                "order" => $order,
-                "response" => $requestJson
-            ];
-
             if ($case->isEmpty()) {
                 $message = "Case {$requestJson->orderId} on request not found on Magento";
                 $this->getResponse()->appendBody($message);
@@ -183,6 +177,12 @@ class Index extends Action
         $signifydApi = $this->configHelper->getSignifydApi($case);
 
         if ($signifydApi->validWebhookRequest($request, $hash, $topic)) {
+            $caseData = [
+                "case" => $case,
+                "order" => $order,
+                "response" => $requestJson
+            ];
+
             /** @var \Signifyd\Connect\Model\Casedata $caseObj */
             $caseObj = $this->objectManager->create(\Signifyd\Connect\Model\Casedata::class);
             $caseObj->updateCase($caseData);

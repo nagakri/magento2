@@ -55,7 +55,7 @@ class RetryCaseJob
     protected $casedataResourceModel;
 
     /**
-     * @var CasedataFactory\
+     * @var CasedataFactory
      */
     protected $casedataFactory;
 
