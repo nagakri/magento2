@@ -124,6 +124,12 @@ class RetryCaseJob
 
         /** @var \Signifyd\Connect\Model\Casedata $case */
         foreach ($asyncWaitingCases as $case) {
+            $this->configHelper->isEnabled($case);
+
+            if ($this->configHelper->isEnabled($case) === false) {
+                continue;
+            }
+
             $this->logger->debug(
                 "Signifyd: preparing for send case no: {$case->getOrderIncrement()}",
                 ['entity' => $case]
@@ -158,6 +164,12 @@ class RetryCaseJob
 
         /** @var \Signifyd\Connect\Model\Casedata $case */
         foreach ($waitingCases as $case) {
+            $this->configHelper->isEnabled($case);
+
+            if ($this->configHelper->isEnabled($case) === false) {
+                continue;
+            }
+
             $this->logger->debug(
                 "Signifyd: preparing for send case no: {$case['order_increment']}",
                 ['entity' => $case]
@@ -192,6 +204,12 @@ class RetryCaseJob
         $inReviewCases = $this->caseRetryObj->getRetryCasesByStatus(Casedata::IN_REVIEW_STATUS);
 
         foreach ($inReviewCases as $case) {
+            $this->configHelper->isEnabled($case);
+
+            if ($this->configHelper->isEnabled($case) === false) {
+                continue;
+            }
+
             $this->logger->debug(
                 "Signifyd: preparing for review case no: {$case['order_increment']}",
                 ['entity' => $case]
@@ -223,6 +241,12 @@ class RetryCaseJob
         $inProcessingCases = $this->caseRetryObj->getRetryCasesByStatus(Casedata::PROCESSING_RESPONSE_STATUS);
 
         foreach ($inProcessingCases as $case) {
+            $this->configHelper->isEnabled($case);
+
+            if ($this->configHelper->isEnabled($case) === false) {
+                continue;
+            }
+
             $this->logger->debug(
                 "Signifyd: preparing for process case no: {$case['order_increment']}",
                 ['entity' => $case]
