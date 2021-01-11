@@ -11,6 +11,7 @@ use Magento\Framework\Setup\SchemaSetupInterface;
 use Magento\Framework\DB\Ddl\Table;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Config\Storage\WriterInterface;
+use Signifyd\Connect\Logger\Install;
 
 /**
  * @codeCoverageIgnore
@@ -28,16 +29,24 @@ class UpgradeSchema implements UpgradeSchemaInterface
     protected $scopeConfig;
 
     /**
+     * @var Install
+     */
+    protected $logger;
+
+    /**
      * UpgradeSchema constructor.
      * @param WriterInterface $configWriter
      * @param ScopeConfigInterface $scopeConfig
+     * @param Install $logger
      */
     public function __construct(
         WriterInterface $configWriter,
-        ScopeConfigInterface $scopeConfig
+        ScopeConfigInterface $scopeConfig,
+        Install $logger
     ) {
         $this->configWriter = $configWriter;
         $this->scopeConfig = $scopeConfig;
+        $this->logger = $logger;
     }
 
     /**
@@ -221,6 +230,40 @@ class UpgradeSchema implements UpgradeSchemaInterface
 
             if ($asyncPaymentMethods == 'cybersource,adyen_cc') {
                 $this->configWriter->delete($asyncPaymentMethodsPath);
+            }
+        }
+
+        if ($setup->getConnection()->tableColumnExists('signifyd_connect_case', 'order_id') === false) {
+            $signifydConnectCase = $setup->getTable('signifyd_connect_case');
+            $salesOrder = $setup->getTable('sales_order');
+
+            $setup->getConnection()->addIndex($signifydConnectCase, 'index_magento_status', 'magento_status');
+
+            $setup->getConnection()->query('ALTER TABLE '. $signifydConnectCase .' DROP PRIMARY KEY');
+
+            $setup->getConnection()->query('ALTER TABLE '. $signifydConnectCase .' modify code VARCHAR(255) NOT NULL PRIMARY KEY;');
+
+            $setup->getConnection()->query('ALTER TABLE '. $signifydConnectCase .' ADD order_id INT(10) unsigned NOT NULL;');
+
+            $setup->getConnection()->addForeignKey(
+                $setup->getFkName($signifydConnectCase, 'order_id', $salesOrder, 'entity_id'),
+                $setup->getTable($signifydConnectCase),
+                'order_id',
+                $setup->getTable($salesOrder),
+                'entity_id',
+                \Magento\Framework\DB\Ddl\Table::ACTION_NO_ACTION
+            );
+
+            try {
+                $setup->getConnection()->query("UPDATE ". $signifydConnectCase ." JOIN " . $salesOrder . " ON ". $signifydConnectCase .".order_increment = " . $salesOrder . ".increment_id SET ". $signifydConnectCase .".order_id = " . $salesOrder . ".entity_id WHERE ". $signifydConnectCase .".magento_status='complete'");
+            } catch(\Exception $e) {
+                $this->logger->debug('Update order_id on magento status complete failed');
+            }
+
+            try {
+            $setup->getConnection()->query("UPDATE ". $signifydConnectCase ." JOIN " . $salesOrder . " ON ". $signifydConnectCase .".order_increment = " . $salesOrder . ".increment_id SET ". $signifydConnectCase .".order_id = " . $salesOrder . ".entity_id WHERE ". $signifydConnectCase .".magento_status<>'complete'");
+            } catch(\Exception $e) {
+                $this->logger->debug('Update order_id on magento status different from complete failed');
             }
         }
 

@@ -75,7 +75,7 @@ class CaseLink extends Column
                 } else {
                     /** @var \Signifyd\Connect\Model\Casedata $case */
                     $case = $this->casedataFactory->create();
-                    $this->casedataResourceModel->load($case, $item['increment_id']);
+                    $this->casedataResourceModel->load($case, $item['entity_id'], 'order_id');
                     $entries = $case->getEntriesText();
 
                     if (!empty($entries)) {

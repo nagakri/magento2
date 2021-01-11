@@ -53,8 +53,9 @@ class CaseInfo extends Template
     {
         if ($this->caseEntity->isEmpty()) {
             $order = $this->getOrder();
+
             if (!$order->isEmpty()) {
-                $this->caseEntity = $this->caseEntity->load($order->getIncrementId());
+                $this->caseEntity = $this->caseEntity->load($order->getId(), 'order_id');
             }
         }
 

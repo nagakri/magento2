@@ -39,10 +39,9 @@ class InstallSchema implements InstallSchemaInterface
                     Table::TYPE_TEXT,
                     255,
                     [
-                        'nullable' => false,
-                        'primary' => true
+                        'nullable' => false
                     ],
-                    'Order ID'
+                    'Order Increment ID'
                 )
                     ->addColumn(
                         'signifyd_status',
@@ -60,6 +59,7 @@ class InstallSchema implements InstallSchemaInterface
                         255,
                         [
                             'nullable' => false,
+                            'primary' => true
                         ],
                         'Code'
                     )
@@ -111,6 +111,24 @@ class InstallSchema implements InstallSchemaInterface
                         ],
                         'Magento Status'
                     )
+                    ->addColumn(
+                        'order_id',
+                        Table::TYPE_INTEGER,
+                        10,
+                        [
+                            'nullable' => false,
+                            'unsigned' => true
+                        ],
+                        'Order Id'
+                    )
+                    ->addForeignKey(
+                        $setup->getFkName('signifyd_connect_case', 'order_id', 'sales_order', 'entity_id'),
+                        'order_id',
+                        $setup->getTable('sales_order'),
+                        'entity_id',
+                        \Magento\Framework\DB\Ddl\Table::ACTION_NO_ACTION
+                    )
+                    ->addIndex('index_magento_status', 'magento_status')
                     ->setComment('Signifyd Cases');
                 $setup->getConnection()->createTable($table);
             }

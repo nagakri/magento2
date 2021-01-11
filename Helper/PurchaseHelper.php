@@ -506,7 +506,7 @@ class PurchaseHelper
 
         /** @var $case \Signifyd\Connect\Model\Casedata */
         $case = $this->casedataFactory->create();
-        $this->casedataResourceModel->load($case, $order->getIncrementId());
+        $this->casedataResourceModel->load($case, $order->getId(), 'order_id');
 
         if ($case->isEmpty()) {
             $this->logger->debug(
@@ -532,7 +532,7 @@ class PurchaseHelper
             }
         }
 
-        $this->logger->debug('Cancelling case ' . $case->getId(), ['entity' => $order]);
+        $this->logger->debug('Cancelling case ' . $case->getData('order_id'), ['entity' => $order]);
 
         $disposition = $this->configHelper->getSignifydApi($order)->cancelGuarantee($case->getCode());
 
@@ -541,7 +541,7 @@ class PurchaseHelper
         if ($disposition == 'CANCELED') {
             try {
                 $this->resourceConnection->getConnection()->beginTransaction();
-                $this->casedataResourceModel->loadForUpdate($case, $case->getId());
+                $this->casedataResourceModel->loadForUpdate($case, $order->getId(), 'order_id');
 
                 $case->setData('guarantee', $disposition);
                 $order->setSignifydGuarantee($disposition);

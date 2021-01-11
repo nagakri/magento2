@@ -137,7 +137,7 @@ class RetryCaseJob
             if ($retries >= 5 || empty($avsCode) == false && empty($cvvCode) == false) {
                 try {
                     $this->resourceConnection->getConnection()->beginTransaction();
-                    $this->casedataResourceModel->loadForUpdate($case, $case->getId());
+                    $this->casedataResourceModel->loadForUpdate($case, $case->getData('code'), 'code');
 
                     $case->setMagentoStatus(Casedata::WAITING_SUBMISSION_STATUS);
                     $case->setUpdated();
@@ -171,7 +171,7 @@ class RetryCaseJob
             if (empty($investigationId) === false) {
                 try {
                     $this->resourceConnection->getConnection()->beginTransaction();
-                    $this->casedataResourceModel->loadForUpdate($case, $case->getId());
+                    $this->casedataResourceModel->loadForUpdate($case, $case->getData('code'), 'code');
 
                     $case->setCode($investigationId);
                     $case->setMagentoStatus(Casedata::IN_REVIEW_STATUS);
@@ -200,10 +200,10 @@ class RetryCaseJob
             $this->reInitStripe($case->getOrder());
 
             try {
-                $response = $this->configHelper->getSignifydApi($case)->getCase($case->getCode());
+                $response = $this->configHelper->getSignifydApi($case)->getCase($case->getData('code'));
 
                 $this->resourceConnection->getConnection()->beginTransaction();
-                $this->casedataResourceModel->loadForUpdate($case, $case->getId());
+                $this->casedataResourceModel->loadForUpdate($case, $case->getData('code'), 'code');
 
                 $case->updateCase($response);
                 $case->updateOrder();
@@ -232,7 +232,7 @@ class RetryCaseJob
 
             try {
                 $this->resourceConnection->getConnection()->beginTransaction();
-                $this->casedataResourceModel->loadForUpdate($case, $case->getId());
+                $this->casedataResourceModel->loadForUpdate($case, $case->getData('code'), 'code');
 
                 $case->updateOrder();
 

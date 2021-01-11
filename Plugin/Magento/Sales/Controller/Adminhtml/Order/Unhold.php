@@ -89,7 +89,7 @@ class Unhold
             $case = $this->casedataFactory->create();
 
             $this->resourceConnection->getConnection()->beginTransaction();
-            $this->casedataResourceModel->loadForUpdate($case, $case->getId());
+            $this->casedataResourceModel->loadForUpdate($case, $case->getData('code'), 'code');
 
             /** @var \Magento\Sales\Model\Order $order */
             $order = $this->orderRepository->get($orderId);
