@@ -32,6 +32,7 @@ use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCo
 use Magento\Catalog\Model\CategoryFactory;
 use Magento\Catalog\Model\ResourceModel\Category as CategoryResourceModel;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Framework\Serialize\SerializerInterface;
 
 /**
  * Class PurchaseHelper
@@ -165,6 +166,11 @@ class PurchaseHelper
     protected $storeManagerInterface;
 
     /**
+     * @var SerializerInterface
+     */
+    protected $serializerInterface;
+
+    /**
      * PurchaseHelper constructor.
      * @param OrderResourceModel $orderResourceModel
      * @param RemoteAddress $remoteAddress
@@ -191,6 +197,7 @@ class PurchaseHelper
      * @param CategoryFactory $categoryFactory
      * @param CategoryResourceModel $categoryResourceModel
      * @param StoreManagerInterface $storeManagerInterface
+     * @param SerializerInterface $serializerInterface
      */
     public function __construct(
         OrderResourceModel $orderResourceModel,
@@ -217,7 +224,8 @@ class PurchaseHelper
         CategoryCollectionFactory $categoryCollectionFactory,
         CategoryFactory $categoryFactory,
         CategoryResourceModel $categoryResourceModel,
-        StoreManagerInterface $storeManagerInterface
+        StoreManagerInterface $storeManagerInterface,
+        SerializerInterface $serializerInterface
     ) {
         $this->orderResourceModel = $orderResourceModel;
         $this->remoteAddress = $remoteAddress;
@@ -244,6 +252,7 @@ class PurchaseHelper
         $this->categoryFactory = $categoryFactory;
         $this->categoryResourceModel = $categoryResourceModel;
         $this->storeManagerInterface = $storeManagerInterface;
+        $this->serializerInterface = $serializerInterface;
     }
 
     /**
@@ -302,7 +311,9 @@ class PurchaseHelper
         $productImage = $product->getImage();
 
         if (isset($productImage)) {
-            $productImageUrl = $this->storeManagerInterface->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA) . 'catalog/product' . $productImage;
+            $productImageUrl = $this->storeManagerInterface
+                ->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA) .
+                'catalog/product' . $productImage;
         } else {
             $productImageUrl = null;
         }
@@ -443,7 +454,8 @@ class PurchaseHelper
         if (empty($shippingMethod) === false) {
             $shipment = [];
             $shipment['shipper'] = $this->makeShipper($shippingMethod);
-            $shipment['shippingPrice'] = floatval($order->getShippingAmount()) + floatval($order->getShippingTaxAmount());
+            $shipment['shippingPrice'] = floatval($order->getShippingAmount()) +
+                floatval($order->getShippingTaxAmount());
             $shipment['shippingMethod'] = $this->makeshippingMethod($shippingMethod);
 
             $shipments[] = $shipment;
@@ -685,10 +697,11 @@ class PurchaseHelper
 
         if (empty($caseResponse->getCaseId()) === false) {
             $this->logger->debug("Case sent. Id is {$caseResponse->getCaseId()}", ['entity' => $order]);
-            $this->orderHelper->addCommentToStatusHistory($order, "Signifyd: case created {$caseResponse->getCaseId()}");
+            $this->orderHelper
+                ->addCommentToStatusHistory($order, "Signifyd: case created {$caseResponse->getCaseId()}");
             return $caseResponse;
         } else {
-            $this->logger->error(serialize($caseResponse));
+            $this->logger->error($this->serializerInterface->serialize($caseResponse));
             $this->logger->error("Case failed to send.", ['entity' => $order]);
             $this->orderHelper->addCommentToStatusHistory($order, "Signifyd: failed to create case");
 

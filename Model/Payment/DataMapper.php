@@ -9,6 +9,7 @@ use Signifyd\Connect\Api\PaymentVerificationInterface;
 use Signifyd\Connect\Logger\Logger;
 use Signifyd\Connect\Model\PaymentGatewayFactory;
 use Signifyd\Connect\Helper\ConfigHelper;
+use Magento\Framework\Serialize\SerializerInterface;
 
 abstract class DataMapper implements PaymentVerificationInterface
 {
@@ -50,25 +51,33 @@ abstract class DataMapper implements PaymentVerificationInterface
     protected $configHelper;
 
     /**
+     * @var SerializerInterface
+     */
+    protected $serializerInterface;
+
+    /**
      * DataMapper constructor.
      * @param Registry $registry
      * @param JsonSerializer $jsonSerializer
      * @param PaymentGatewayFactory $paymentGatewayFactory
      * @param Logger $logger
      * @param ConfigHelper $configHelper
+     * @param SerializerInterface $serializerInterface
      */
     public function __construct(
         Registry $registry,
         JsonSerializer $jsonSerializer,
         PaymentGatewayFactory $paymentGatewayFactory,
         Logger $logger,
-        ConfigHelper $configHelper
+        ConfigHelper $configHelper,
+        SerializerInterface $serializerInterface
     ) {
         $this->registry = $registry;
         $this->jsonSerializer = $jsonSerializer;
         $this->paymentGatewayFactory = $paymentGatewayFactory;
         $this->logger = $logger;
         $this->configHelper = $configHelper;
+        $this->serializerInterface = $serializerInterface;
     }
 
     /**
@@ -144,7 +153,8 @@ abstract class DataMapper implements PaymentVerificationInterface
             if ($response instanceof \Signifyd\Models\Payment\Response\ResponseInterface) {
                 $data = $this->getPaymentDataFromGatewayResponse($response);
 
-                $this->logger->info('Data found on payment gateway: ' . (empty($data) ? 'false' : 'true'), ['entity' => $order]);
+                $this->logger->info('Data found on payment gateway: ' .
+                    (empty($data) ? 'false' : 'true'), ['entity' => $order]);
             }
         }
 
@@ -172,7 +182,7 @@ abstract class DataMapper implements PaymentVerificationInterface
             try {
                 /** @var stdClass $gatewayIntegrationSettings */
                 $gatewayIntegrationSettings = $this->jsonSerializer->unserialize($gatewayIntegrationSettings);
-                $this->logger->info(serialize($gatewayIntegrationSettings));
+                $this->logger->info($this->serializerInterface->serialize($gatewayIntegrationSettings));
             } catch (\InvalidArgumentException $e) {
                 $this->logger->error(
                     "Invalid gateway integration settings found to {$paymentMethod}: {$e->getMessage()}"

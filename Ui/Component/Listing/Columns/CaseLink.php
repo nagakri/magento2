@@ -81,21 +81,10 @@ class CaseLink extends Column
 
                     case "signifyd_guarantee":
                         $item[$name] = $case->getGuarantee();
-                        $entries = $case->getEntriesText();
+                        $testInvestigation = $case->getEntries('testInvestigation');
 
-                        if (!empty($entries)) {
-                            try {
-                                $entries = $this->serializer->unserialize($entries);
-                            } catch (\InvalidArgumentException $e) {
-                                $entries = [];
-                            }
-
-                            if (is_array($entries) &&
-                                isset($entries['testInvestigation']) &&
-                                $entries['testInvestigation'] == true
-                            ) {
-                                $item[$name] = "TEST: {$item[$name]}";
-                            }
+                        if ($testInvestigation === true) {
+                            $item[$name] = "TEST: {$item[$name]}";
                         }
                         break;
 
